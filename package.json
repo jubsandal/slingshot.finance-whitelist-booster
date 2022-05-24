@@ -9,16 +9,17 @@
         "start": "node dist/main.js"
     },
     "dependencies": {
+        "@types/cheerio": "^0.22.31",
         "@types/imap": "^0.8.35",
         "@types/mailparser": "^3.4.0",
         "aloedb-node": "^1.0.2",
-        "emailjs-imap-client": "^3.1.0",
+        "cheerio": "^1.0.0-rc.11",
         "events": "^3.3.0",
         "imap": "^0.8.19",
         "mailparser": "^3.5.0",
         "puppeteer": "^14.1.1",
         "puppeteer-proxy": "^2.1.2",
-        "simpleparser": "^0.0.1-alfa",
-        "superstruct": "^0.15.4"
+        "superstruct": "^0.15.4",
+        "xpath-html": "^1.0.3"
     }
 }

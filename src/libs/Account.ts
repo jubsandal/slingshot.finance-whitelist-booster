@@ -3,7 +3,7 @@ import * as crypt from 'crypto'
 import { number, array, assert, object, string } from 'superstruct'
 import { Types, Database } from 'aloedb-node'
 
-type EMail = {
+export type EMail = {
     login: string,
     password: string
 }

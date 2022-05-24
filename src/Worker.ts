@@ -8,7 +8,7 @@ import { randSleep, sleep } from './libs/utils.js'
 import { Account } from './libs/Account.js'
 import { Config } from './Config.js'
 import { selectors } from './libs/selectors.js'
-import { EMail } from './libs/EMail.js'
+import { getLastUnread } from './libs/email-helper.js'
 
 let launchOpts = () => {
     return {
@@ -51,12 +51,23 @@ export class Worker extends EventEmitter {
     protected async confirmEmail() {
         let page = await this.page()
 
-        let email = new EMail(this.account.email.login, this.account.email.password)
-        await email.init()
-        let messages = await email.lastEmails()
-
-        for (let m of messages) {
-            console.log(m.from)
+        // max wait 1 min + fetch time
+        const maxTries = 5;
+        const waitTime = 12 * 1000;
+        let found = false
+        for (let tries = 0; tries < maxTries; tries++) {
+            try {
+                let mails = await getLastUnread(this.account.email)
+                for (let mail of mails) {
+                    if (
+                        mail.from &&
+                        typeof mail.from.value === 'string' &&
+                        mail.from.value === "hello@slingshot.finance"
+                    ) {
+                        if (mail.html)
+                    }
+                }
+            } catch (e) { }
         }
 
         // let v_b = await page.$x("//a[contains(., 'VERIFY')]")
