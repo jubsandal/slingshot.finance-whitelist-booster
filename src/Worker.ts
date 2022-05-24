@@ -86,6 +86,8 @@ export class Worker extends EventEmitter {
         await page.hover(selectors.slingshot.join_button)
         await randSleep(1000, 200)
         await page.click(selectors.slingshot.join_button)
+
+        // pass Capcha
     }
 
     protected async page() { return (await this.browser.pages())[0] }
