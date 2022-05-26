@@ -1,21 +1,24 @@
 import * as fs from 'fs'
 import * as crypt from 'crypto'
-import { number, array, assert, object, string } from 'superstruct'
+import { optional, boolean, number, array, assert, object, string } from 'superstruct'
 import { Types, Database } from 'aloedb-node'
 
 export type EMail = {
     login: string,
-    password: string
+    password: string,
+    broken?: boolean
 }
 
 const EMailSign = object({
     login: string(),
-    password: string()
+    password: string(),
+    broken: optional(boolean())
 })
 
 interface IAccount {
     id?: number,
     email: EMail,
+    accessLink?: string,
     refLink?: string,
     parent?: number,
     referals?: number[]
@@ -24,6 +27,7 @@ interface IAccount {
 const AccountSign = object({
     id: number(),
     email: EMailSign,
+    accessLink: string(),
     refLink: string(),
     parent: number(),
     referals: array(number())
@@ -44,6 +48,7 @@ export const db = { accounts: accounts_db }
 export class Account implements IAccount {
     readonly id: number;
     readonly email: EMail;
+    accessLink: string;
     refLink: string;
     parent: number;
     referals: number[];
@@ -61,6 +66,8 @@ export class Account implements IAccount {
         if (this.id == null) {
             this.id = 0
         }
+        this.accessLink = acc.accessLink ?? ""
+        acc.email.broken == acc.email.broken ?? false
         this.email = acc.email
         this.refLink = acc.refLink ?? ""
         this.parent = acc.parent ?? -1
@@ -84,11 +91,12 @@ export class Account implements IAccount {
         }
     }
 
+    async setAccessLink(link: string) { this.accessLink = link; return await this.sync() }
     async setRefLink(link: string) { this.refLink = link; return await this.sync() }
-    async setParent(parent: number | IAccount) {
-        if (typeof parent == "number") {
+    async setParent(parent: number | Account | IAccount) {
+        if (typeof parent === "number") {
             this.parent = parent
-        } else if (typeof parent == "object") {
+        } else if (typeof parent === "object") {
             this.parent = <number>parent.id
         }
 
@@ -99,22 +107,31 @@ export class Account implements IAccount {
 
         await this.sync()
     }
+    async markEmailBroken(broken = true) {
+        this.email.broken = broken
+        return await this.sync()
+    }
 
     static async importEmails(file: fs.PathLike) {
         console.log("importing from", file)
         const raw = fs.readFileSync(file).toString()
         const lines = raw.split("\r\n")
 
+        let im = 0
+        let skip = 0
         for (const line of lines) {
             const split = line.split(':')
             if (split[0].length > 2) {
                 let acc = new Account({email: { login: split[0], password: split[1] }})
-                if (await accounts_db.findOne({ email: acc.email })) {
+                if (await accounts_db.findOne((a) => a.email.login == acc.email.login && a.email.password == acc.email.password)) {
+                    skip++
                 } else {
+                    im++
                     await acc.sync()
                 }
             }
         }
+        console.log("Imported", im, "Skiped", skip)
     }
 
     // static async findOne(query: Types.Query<IAccount> | Types.QueryFunction<IAccount> | undefined): Promise<Account | null> {

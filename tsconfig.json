@@ -68,5 +68,6 @@
     },
     "include": [
         "./src/**/*"
-    ]
+    ],
+    "typeRoots": [" src/global.d.ts" ]
 }

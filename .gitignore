@@ -1,7 +1,10 @@
 # Logs
 logs
+import/
+*.txt
 *.log
 accounts.json
+accounts*
 config.json
 near.txt
 dist/

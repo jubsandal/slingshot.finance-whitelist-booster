@@ -3,6 +3,7 @@ import { readFileSync } from 'fs'
 
 const ConfigSign = object({
     headless: boolean(),
+    captcha_token: string(),
 
     proxy: array(
         object({
