@@ -85,7 +85,9 @@ export class Worker extends EventEmitter {
             console.log(e)
             error.code = SuccessCodes.unknown_error
         } finally {
-            await this.browser.close()
+            try {
+                await this.browser.close()
+            } catch(e) {}
             return {
                 success: error,
                 account: this.account
@@ -102,7 +104,18 @@ export class Worker extends EventEmitter {
             await page.goto(link, { waitUntil: "domcontentloaded" })
             await randSleep(2500, 2000)
             await page.goto(link, { waitUntil: "domcontentloaded" })
-            this.account.setAccessLink(page.url())
+            let pageErrorPromise = new Promise((resolve) => {
+                page.once("pageerror", () => resolve(true))
+                page.once("error", () => resolve(true))
+                sleep(5000).then(() => resolve(false))
+            })
+            let res = await pageErrorPromise
+            if (res) {
+                throw "sdf"
+            } else {
+                this.account.setAccessLink(page.url)
+            }
+            
 
             // await page.waitForSelector(selectors.slingshot.refLink)
             // let reflink = await (<puppeteerDefault.Page>page).$eval(selectors.slingshot.refLink, e=>e.textContent)
@@ -224,11 +237,11 @@ export class Worker extends EventEmitter {
             // await page.on('dialog', async (dialog: puppeteer.Dialog) => {
             //     await dialog.accept();
             // });
-            await page.on('error', async (err: any) => {
+            await page.on('error', (err: any) => {
                 const errorMessage = err.toString();
                 console.log('browser error:', errorMessage)
             });
-            await page.on('pageerror', async (err: any) => {
+            await page.on('pageerror', (err: any) => {
                 const errorMessage = err.toString();
                 console.log("browser page error:", errorMessage)
             });
