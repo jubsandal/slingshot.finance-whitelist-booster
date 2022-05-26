@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer-extra'
 import RecaptchaPlugin from 'puppeteer-extra-plugin-recaptcha'
 import { Config } from './Config.js'
+import { log } from './libs/utils.js'
 import { db, Account } from './libs/Account.js'
 import { Worker, SuccessCodes } from './Worker.js'
 import { Worker as Test } from './WorkerTest.js'
@@ -37,7 +38,7 @@ if (parentsID.length > 0) {
     process.exit()
 }
 
-console.log("Parents:", parentsID.length)
+log.echo("Parents:", parentsID.length)
 
 let passed = ( overall - (await db.accounts.findMany((a) => 
     a.accessLink === "" &&
@@ -60,7 +61,7 @@ let accounts = (await db.accounts.findMany((a) =>
 )).map(a => new Account(a))
 for await (let account of accounts) {
     if (account.accessLink === "" && account.referals.length < 20) { // not registred
-        console.log("Passing", account.email.login)
+        log.echo("Passing", account.email.login)
 
         if (( shift === true || (passed - initialPassed) % 8 === 0 ) && (passed - initialPassed) != 0) {
             shift = true
@@ -72,15 +73,15 @@ for await (let account of accounts) {
         switch (res.success.code) {
             case SuccessCodes.ok:
                 await account.setParent(await curParent())
-                console.log("Registred with access link:", account.accessLink)
+               log.echo("Registred with access link:", account.accessLink)
                 break;
             case SuccessCodes.email_error:
                 await account.markEmailBroken()
-                console.log("An email error")
+                log.error("An email error")
                 break;
             case SuccessCodes.unknown_error:
             default:
-                console.log("An unknown error")
+                log.error("An unknown error")
                 break;
         }
 
@@ -100,7 +101,7 @@ for await (let account of accounts) {
             newParent = true
             if (parentsID.length <= curParentI) { // have next reserved parent, do next
                 // parentList.push(account)
-                console.log("Parents left")
+                log.echo("Parents left")
                 break;
             }
         }

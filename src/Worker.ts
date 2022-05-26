@@ -176,11 +176,11 @@ export class Worker extends EventEmitter {
             solved,
             error
 
-        } = await page.solveRecaptchas()
-        if (solved) {
-            console.log("Captcha solved")
-        } else {
+        } = await (<puppeteerDefault.Page>page).solveRecaptchas()
+        if (error) {
             throw "Cannot solve captcha"
+        } else {
+            console.log("Captcha solved")
         }
     }
 
