@@ -7,7 +7,7 @@ import { proxyRequest } from 'puppeteer-proxy'
 import { EventEmitter } from 'events'
 import { ParsedMail } from 'mailparser'
 
-import { randSleep, sleep } from './libs/utils.js'
+import { log, randSleep, sleep } from './libs/utils.js'
 import { Account } from './libs/Account.js'
 import { Config } from './Config.js'
 import { selectors } from './libs/selectors.js'
@@ -31,13 +31,16 @@ let launchOpts = () => {
 export enum SuccessCodes {
     ok,
     email_error,
+    captcha_error,
+    slingshot_error,
+    initialization_error,
     unknown_error
 }
 
 type WorkerResult = {
     success: {
-        code: SuccessCodes
-        // description?
+        code: SuccessCodes,
+        text: string
     }
     account: Account
 }
@@ -66,7 +69,8 @@ export class Worker extends EventEmitter {
 
     public async run(): Promise<WorkerResult> {
         let error = {
-            code: SuccessCodes.ok
+            code: SuccessCodes.ok,
+            text: "Success"
         }
         this.barHelper.create()
         try {
@@ -75,15 +79,18 @@ export class Worker extends EventEmitter {
             await this.joinWhiteList()
             this.barHelper.next()
             let link = await this.scrapRefLink()
-            if (link) {
+            if (link != "") {
                 this.barHelper.next()
                 await this.doVerify(link)
             } else {
-                error.code = SuccessCodes.email_error
+                throw {
+                    code: SuccessCodes.email_error,
+                    text: "Cannot fetch mails"
+                }
             }
-        } catch (e) {
-            console.log(e)
-            error.code = SuccessCodes.unknown_error
+        } catch (e: any) {
+            error.code = e.code ?? SuccessCodes.unknown_error
+            error.text = e.text ?? "Unknown error"
         } finally {
             try {
                 await this.browser.close()
@@ -104,26 +111,43 @@ export class Worker extends EventEmitter {
             await page.goto(link, { waitUntil: "domcontentloaded" })
             await randSleep(2500, 2000)
             await page.goto(link, { waitUntil: "domcontentloaded" })
-            let pageErrorPromise = new Promise((resolve) => {
-                page.once("pageerror", () => resolve(true))
-                page.once("error", () => resolve(true))
+            let pageErrorPromise: Promise<boolean> = new Promise((resolve) => {
+                page.on("pageerror", (e) => {
+                    log.error(e.message)
+                    resolve(true)
+                })
+                page.on("error", (e) => {
+                    log.error(e.message)
+                    resolve(true)
+                })
                 sleep(5000).then(() => resolve(false))
             })
-            let res = await pageErrorPromise
-            if (res) {
-                throw "sdf"
+            if (await pageErrorPromise) {
+                throw {
+                    code: SuccessCodes.slingshot_error,
+                    text: "Slingshot page error"
+                }
             } else {
-                this.account.setAccessLink(page.url)
+                this.account.setAccessLink(page.url())
             }
-            
 
+            // ref scap
             // await page.waitForSelector(selectors.slingshot.refLink)
             // let reflink = await (<puppeteerDefault.Page>page).$eval(selectors.slingshot.refLink, e=>e.textContent)
 
             // if (reflink) {
             //     await this.account.setRefLink(reflink)
             // }
-        } catch (e) { }
+        } catch (e: any) {
+            if (e.code && e.text) {
+                throw e
+            } else {
+                throw {
+                    code: SuccessCodes.unknown_error,
+                    text: e
+                }
+            }
+        }
     }
 
     protected async scrapRefLink() {
@@ -161,7 +185,7 @@ export class Worker extends EventEmitter {
     protected async joinWhiteList() {
         let page = await this.page()
 
-        console.log("Ref link:", this.refLink)
+        log.echo("Ref link:", this.refLink)
         await page.goto(this.refLink)
 
         await page.waitForSelector(selectors.slingshot.email_input, {
@@ -191,9 +215,12 @@ export class Worker extends EventEmitter {
 
         } = await (<puppeteerDefault.Page>page).solveRecaptchas()
         if (error) {
-            throw "Cannot solve captcha"
+            throw {
+                code: SuccessCodes.captcha_error,
+                text: "Cannot solve captcha"
+            }
         } else {
-            console.log("Captcha solved")
+            log.echo("Captcha solved")
         }
     }
 
@@ -204,7 +231,10 @@ export class Worker extends EventEmitter {
             // @ts-ignore
             this.browser = await puppeteer.launch(launchOpts())
             if (!this.browser) {
-                throw "Cannot create browser"
+                throw {
+                    code: SuccessCodes.initialization_error,
+                    text: "Cannot create browser"
+                }
             }
             let page = await this.page();
 
@@ -214,7 +244,7 @@ export class Worker extends EventEmitter {
                 function randomProxy(): string {
                     let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
                     let proxyString = "http://" + proxy!.user + ":" + proxy!.password + "@" + proxy!.host
-                    console.log("Using proxy:", proxyString)
+                    log.echo("Using proxy:", proxyString)
                     return proxyString;
                 }
 
@@ -234,19 +264,22 @@ export class Worker extends EventEmitter {
 
             await page.setViewport({ width: 1920, height: 1060 })
             await page.setDefaultNavigationTimeout(500000);
-            // await page.on('dialog', async (dialog: puppeteer.Dialog) => {
-            //     await dialog.accept();
+            await page.on('dialog', async (dialog: puppeteerDefault.Dialog) => {
+                await dialog.accept();
+            });
+            // await page.on('error', (err: any) => {
+            //     const errorMessage = err.toString();
+            //     log.error('browser error:', errorMessage)
             // });
-            await page.on('error', (err: any) => {
-                const errorMessage = err.toString();
-                console.log('browser error:', errorMessage)
-            });
-            await page.on('pageerror', (err: any) => {
-                const errorMessage = err.toString();
-                console.log("browser page error:", errorMessage)
-            });
+            // await page.on('pageerror', (err: any) => {
+            //     const errorMessage = err.toString();
+            //     log.error("page error:", errorMessage)
+            // });
         } catch (err) {
-            throw new Error('page initialization failed. Reason: ' + err);
+            throw {
+                code: SuccessCodes.initialization_error,
+                text: 'Page initialization failed. Reason: ' + err
+            }
         }
     }
 }

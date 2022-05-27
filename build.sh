@@ -1,7 +1,8 @@
-if [[ ! -d node_modules ]]
-then
+echo "Checking form packages existance"
+# if [[ ! -d node_modules ]]
+# then
     npm i
-fi
+# fi
 
 tsc --build --pretty
 

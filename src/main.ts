@@ -73,22 +73,17 @@ for await (let account of accounts) {
         switch (res.success.code) {
             case SuccessCodes.ok:
                 await account.setParent(await curParent())
-               log.echo("Registred with access link:", account.accessLink)
+                log.echo("Registred with access link:", account.accessLink)
+                doneReferalTask(account, true)
                 break;
+            // @ts-ignore
             case SuccessCodes.email_error:
                 await account.markEmailBroken()
-                log.error("An email error")
-                break;
             case SuccessCodes.unknown_error:
             default:
-                log.error("An unknown error")
+                log.error("Account:", account.id, "-", res.success.text)
+                doneReferalTask(account, false)
                 break;
-        }
-
-        if (res.success.code != SuccessCodes.ok) {
-            doneReferalTask(account, false)
-        } else {
-            doneReferalTask(account, true)
         }
 
         updateParentTask(await curParent())

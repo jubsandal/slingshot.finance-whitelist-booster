@@ -6,15 +6,15 @@ export function addParentTask(account: Account) {
     mpb.addTask(accountBarID(account), {
         type: 'percentage',
         index: 1,
-        message: 5*account.referals.length + '/20',
-        percentage: 5*account.referals.length/100,
+        message: account.referals.length + '/20',
+        percentage: account.referals.length/20,
         barTransformFn: (m) => chalk.yellow(m)
     })
 }
 
 export function updateParentTask(account: Account) {
     mpb.updateTask(accountBarID(account), {
-        percentage: 5*account.referals.length/100,
+        percentage: account.referals.length/20,
         message: account.referals.length+"/20",
         barTransformFn:
             account.referals.length === 20 ?
@@ -29,9 +29,7 @@ export class WorkerBarHelper {
     constructor(
         private account: Account,
         private tasks: Array<string>
-    ) {
-
-    }
+    ) { }
 
     create() {
         mpb.addTask(accountBarID(this.account), {
