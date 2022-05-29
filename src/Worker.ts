@@ -110,8 +110,9 @@ export class Worker extends EventEmitter {
             let page = (<puppeteerDefault.Page>await this.page())
 
             await page.goto(link, { waitUntil: "domcontentloaded" })
-            await randSleep(2500, 2000)
+            await randSleep(3500, 2000)
             await page.reload({ waitUntil: "domcontentloaded" })
+            await randSleep(5500, 2000)
             let pageErrorPromise: Promise<boolean> = new Promise((resolve) => {
                 page.on("pageerror", (e) => {
                     log.error(e.message)
