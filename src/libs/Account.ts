@@ -19,6 +19,7 @@ interface IAccount {
     id?: number,
     email: EMail,
     accessLink?: string,
+    verifyLink?: string,
     refLink?: string,
     parent?: number,
     referals?: number[]
@@ -28,6 +29,7 @@ const AccountSign = object({
     id: number(),
     email: EMailSign,
     accessLink: string(),
+    verifyLink: optional(string()),
     refLink: string(),
     parent: number(),
     referals: array(number())
@@ -51,6 +53,7 @@ export class Account implements IAccount {
     accessLink: string;
     refLink: string;
     parent: number;
+    verifyLink?: string;
     referals: number[];
 
     constructor(acc: IAccount) {
@@ -68,6 +71,7 @@ export class Account implements IAccount {
         }
         this.accessLink = acc.accessLink ?? ""
         acc.email.broken = acc.email.broken ?? false
+        this.verifyLink = acc.verifyLink ?? undefined
         this.email = acc.email
         this.refLink = acc.refLink ?? ""
         this.parent = acc.parent ?? -1
@@ -92,6 +96,7 @@ export class Account implements IAccount {
     }
 
     async setAccessLink(link: string) { this.accessLink = link; return await this.sync() }
+    async setVerificationLink(link: string) { this.verifyLink = link; return await this.sync() }
     async setRefLink(link: string) { this.refLink = link; return await this.sync() }
     async setParent(parent: number | Account | IAccount) {
         if (typeof parent === "number") {

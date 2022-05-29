@@ -76,14 +76,12 @@ export class Worker extends EventEmitter {
         try {
             await this.init()
             this.barHelper.next()
-            let page = await this.page()
-            await page.goto(this.account.accessLink)
-            await sleep(100000000)
             await this.joinWhiteList()
             this.barHelper.next()
             let link = await this.scrapRefLink()
             if (link != "") {
                 this.barHelper.next()
+                await this.account.setVerificationLink(link)
                 await this.doVerify(link)
             } else {
                 throw {
@@ -113,7 +111,7 @@ export class Worker extends EventEmitter {
 
             await page.goto(link, { waitUntil: "domcontentloaded" })
             await randSleep(2500, 2000)
-            await page.goto(link, { waitUntil: "domcontentloaded" })
+            await page.reload({ waitUntil: "domcontentloaded" })
             let pageErrorPromise: Promise<boolean> = new Promise((resolve) => {
                 page.on("pageerror", (e) => {
                     log.error(e.message)
@@ -125,22 +123,25 @@ export class Worker extends EventEmitter {
                 })
                 sleep(5000).then(() => resolve(false))
             })
+            this.account.setAccessLink(page.url())
             if (await pageErrorPromise) {
                 throw {
                     code: SuccessCodes.slingshot_error,
                     text: "Slingshot page error"
                 }
-            } else {
-                this.account.setAccessLink(page.url())
             }
 
             // ref scap
-            // await page.waitForSelector(selectors.slingshot.refLink)
-            // let reflink = await (<puppeteerDefault.Page>page).$eval(selectors.slingshot.refLink, e=>e.textContent)
+            try {
+                await page.waitForSelector(selectors.slingshot.refLink)
+                let reflink = await (<puppeteerDefault.Page>page).$eval(selectors.slingshot.refLink, e=>e.textContent)
 
-            // if (reflink) {
-            //     await this.account.setRefLink(reflink)
-            // }
+                if (reflink) {
+                    await this.account.setRefLink(reflink)
+                }
+            } catch(e) {
+                log.echo("Cannot scrap referal link")
+            }
         } catch (e: any) {
             if (e.code && e.text) {
                 throw e
@@ -241,25 +242,25 @@ export class Worker extends EventEmitter {
             }
             let page = await this.page();
 
-            if (Config().proxy.length) {
-                await page.setRequestInterception(true)
+            //             if (Config().proxy.length) {
+            //                 await page.setRequestInterception(true)
 
-                function randomProxy(): string {
-                    let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
-                    let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
-                    log.echo("Using proxy:", proxyString)
-                    return proxyString;
-                }
+            //                 function randomProxy(): string {
+            //                     let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
+            //                     let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
+            //                     log.echo("Using proxy:", proxyString)
+            //                     return proxyString;
+            //                 }
 
-                const proxyString = randomProxy()
-                page.on('request', async (request: any) => {
-                    await proxyRequest({
-                        page: page,
-                        proxyUrl: proxyString,
-                        request,
-                    });
-                });
-            }
+            //                 const proxyString = randomProxy()
+            //                 page.on('request', async (request: any) => {
+            //                     await proxyRequest({
+            //                         page: page,
+            //                         proxyUrl: proxyString,
+            //                         request,
+            //                     });
+            //                 });
+            //             }
 
             await page
                 .setUserAgent(
