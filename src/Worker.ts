@@ -76,6 +76,9 @@ export class Worker extends EventEmitter {
         try {
             await this.init()
             this.barHelper.next()
+            let page = await this.page()
+            await page.goto(this.account.accessLink)
+            await sleep(100000000)
             await this.joinWhiteList()
             this.barHelper.next()
             let link = await this.scrapRefLink()
@@ -90,7 +93,7 @@ export class Worker extends EventEmitter {
             }
         } catch (e: any) {
             error.code = e.code ?? SuccessCodes.unknown_error
-            error.text = e.text ?? "Unknown error"
+            error.text = e.text ?? e
         } finally {
             try {
                 await this.browser.close()
@@ -224,7 +227,7 @@ export class Worker extends EventEmitter {
         }
     }
 
-    protected async page() { return (await this.browser.pages())[0] }
+    protected async page() { return <puppeteerDefault.Page>(await this.browser.pages())[0] }
 
     protected async init() {
         try {
@@ -243,7 +246,7 @@ export class Worker extends EventEmitter {
 
                 function randomProxy(): string {
                     let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
-                    let proxyString = "http://" + proxy!.user + ":" + proxy!.password + "@" + proxy!.host
+                    let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
                     log.echo("Using proxy:", proxyString)
                     return proxyString;
                 }
@@ -262,7 +265,7 @@ export class Worker extends EventEmitter {
                 .setUserAgent(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3419.0 Safari/537.36')
 
-            await page.setViewport({ width: 1920, height: 1060 })
+            // await page.setViewport({ width: 1920, height: 1060 })
             await page.setDefaultNavigationTimeout(500000);
             await page.on('dialog', async (dialog: puppeteerDefault.Dialog) => {
                 await dialog.accept();

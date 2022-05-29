@@ -55,13 +55,13 @@ mpb.addTask('Registred', {
 })
 
 let accounts = (await db.accounts.findMany((a) => 
-    a.email.broken == false &&
+    a.email.broken === false &&
     a.accessLink === "" &&
     a.referals!.length === 0
 )).map(a => new Account(a))
 for await (let account of accounts) {
-    if (account.accessLink === "" && account.referals.length < 20) { // not registred
-        log.echo("Passing", account.email.login)
+    // if (account.accessLink === "" && account.referals.length < 20) { // not registred
+    //     log.echo("Passing", account.email.login)
 
         if (( shift === true || (passed - initialPassed) % 8 === 0 ) && (passed - initialPassed) != 0) {
             shift = true
@@ -72,8 +72,13 @@ for await (let account of accounts) {
         account = res.account
         switch (res.success.code) {
             case SuccessCodes.ok:
-                await account.setParent(await curParent())
                 log.echo("Registred with access link:", account.accessLink)
+                await account.setParent(await curParent())
+                doneReferalTask(account, true)
+                break;
+            case SuccessCodes.slingshot_error:
+                log.echo("Sling error, retrie later")
+                await account.setParent(await curParent())
                 doneReferalTask(account, true)
                 break;
             // @ts-ignore
@@ -119,9 +124,9 @@ for await (let account of accounts) {
             percentage: passed/overall,
             message: passed + "/" + overall
         })
-    } else {
-        // console.log("Skiping account:", account.email.login)
-    }
+    // } else {
+    //     // console.log("Skiping account:", account.email.login)
+    // }
 }
 
 await db.accounts.save()

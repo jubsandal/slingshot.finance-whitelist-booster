@@ -67,7 +67,7 @@ export class Account implements IAccount {
             this.id = 0
         }
         this.accessLink = acc.accessLink ?? ""
-        acc.email.broken == acc.email.broken ?? false
+        acc.email.broken = acc.email.broken ?? false
         this.email = acc.email
         this.refLink = acc.refLink ?? ""
         this.parent = acc.parent ?? -1
