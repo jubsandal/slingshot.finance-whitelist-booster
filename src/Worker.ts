@@ -14,6 +14,8 @@ import { selectors } from './libs/selectors.js'
 import { enterEmail, getLastUnread, htmlSearchVerify } from './libs/email-helper.js'
 import { mpb, accountBarID } from './global.js'
 import { WorkerBarHelper } from './libs/bar-helper.js'
+import https from 'https'
+import * as fs from 'fs'
 
 let launchOpts = () => {
     return {
@@ -217,7 +219,6 @@ export class Worker extends EventEmitter {
             solutions,
             solved,
             error
-
         } = await (<puppeteerDefault.Page>page).solveRecaptchas()
         if (error) {
             throw {
@@ -243,31 +244,49 @@ export class Worker extends EventEmitter {
             }
             let page = await this.page();
 
-            //             if (Config().proxy.length) {
-            //                 await page.setRequestInterception(true)
+            let link = Config().proxiesLink
+            let proxyFile = "./proxies"
+            let getProxyListPromise: Promise<string[]> = new Promise((resolve) => {
+                https.get(link, (responce) => {
+                    const writeStream = fs.createWriteStream(proxyFile);
+                    responce.pipe(writeStream)
+                    writeStream.on("finish", () => {
+                        writeStream.close();
+                        const raw = fs.readFileSync(proxyFile)
+                        resolve(raw.toString().split('\r\n'))
+                    })
+                })
+            })
 
-            //                 function randomProxy(): string {
-            //                     let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
-            //                     let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
-            //                     log.echo("Using proxy:", proxyString)
-            //                     return proxyString;
-            //                 }
+            let proxies = await getProxyListPromise
 
-            //                 const proxyString = randomProxy()
-            //                 page.on('request', async (request: any) => {
-            //                     await proxyRequest({
-            //                         page: page,
-            //                         proxyUrl: proxyString,
-            //                         request,
-            //                     });
-            //                 });
-            //             }
+            if (proxies.length) {
+                await page.setRequestInterception(true)
+
+                function randomProxy(): string {
+                    // let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
+                    // let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
+                    const proxy = proxies[0+Math.floor(Math.random() * Config().proxy.length)]
+                    let proxyString = "http://" + proxy
+                    log.echo("Using proxy:", proxyString)
+                    return proxyString;
+                }
+
+                const proxyString = randomProxy()
+                page.on('request', async (request: any) => {
+                    await proxyRequest({
+                        page: page,
+                        proxyUrl: proxyString,
+                        request,
+                    });
+                });
+            }
 
             await page
                 .setUserAgent(
                     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3419.0 Safari/537.36')
 
-            // await page.setViewport({ width: 1920, height: 1060 })
+            await page.setViewport({ width: 1920, height: 1060 })
             await page.setDefaultNavigationTimeout(500000);
             await page.on('dialog', async (dialog: puppeteerDefault.Dialog) => {
                 await dialog.accept();

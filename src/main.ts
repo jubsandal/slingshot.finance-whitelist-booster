@@ -95,7 +95,7 @@ for await (let account of accounts) {
 
         let newParent = false
         // if (curParent >= 0) { // if registred by ref link
-        if ((await curParent()).referals.length >= 20) { // if have 20+ referals
+        if ((await curParent()).referals.length >= 25) { // if have 20+ referals
             curParentI++
             curParentID = parentsID[curParentI]
             newParent = true
