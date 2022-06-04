@@ -71,9 +71,12 @@ async function init() {
 }
 
 let parents = (await db.accounts.findMany((a) =>
-    a.id != 2 &&
-    a.referals!.length == 20
+    a.id == Number(process.argv[2])
+    // a.id != 2 &&
+    // a.referals!.length == 20
 )).map(a => new Account(a))
+
+console.log(parents)
 
 let accounts = new Array<Account>()
 for (let parent of parents) {

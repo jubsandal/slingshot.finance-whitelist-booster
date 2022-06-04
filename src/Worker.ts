@@ -244,39 +244,59 @@ export class Worker extends EventEmitter {
             }
             let page = await this.page();
 
-            let link = Config().proxiesLink
-            let proxyFile = "./proxies"
-            let getProxyListPromise: Promise<string[]> = new Promise((resolve) => {
-                https.get(link, (responce) => {
-                    const writeStream = fs.createWriteStream(proxyFile);
-                    responce.pipe(writeStream)
-                    writeStream.on("finish", () => {
-                        writeStream.close();
-                        const raw = fs.readFileSync(proxyFile)
-                        resolve(raw.toString().split('\r\n'))
-                    })
-                })
-            })
+            // let link = Config().proxiesLink
+            // let proxyFile = "./proxies"
+            // let getProxyListPromise: Promise<string[]> = new Promise((resolve) => {
+            //     https.get(link, (responce) => {
+            //         const writeStream = fs.createWriteStream(proxyFile);
+            //         responce.pipe(writeStream)
+            //         writeStream.on("finish", () => {
+            //             writeStream.close();
+            //             const raw = fs.readFileSync(proxyFile)
+            //             resolve(raw.toString().split('\r\n'))
+            //         })
+            //     })
+            // })
 
-            let proxies = await getProxyListPromise
+            // let proxies = await getProxyListPromise
 
-            if (proxies.length) {
+            // if (proxies.length) {
+            //     await page.setRequestInterception(true)
+
+            //     function randomProxy(): string {
+            //         // let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
+            //         // let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
+            //         const proxy = proxies[0+Math.floor(Math.random() * Config().proxy.length)]
+            //         let proxyString = "http://" + proxy
+            //         log.echo("Using proxy:", proxyString)
+            //         return proxyString;
+            //     }
+
+            //     const proxyString = randomProxy()
+            //     page.on('request', async (request: any) => {
+            //         await proxyRequest({
+            //             page: page,
+            //             proxyUrl: proxyString,
+            //             request,
+            //         });
+            //     });
+            // }
+
+            if (Config().proxy.length) {
                 await page.setRequestInterception(true)
 
                 function randomProxy(): string {
-                    // let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
-                    // let proxyString = "http://" + (proxy!.user && proxy!.password ? proxy!.user + ":" + proxy!.password + "@" : "") + proxy!.host
-                    const proxy = proxies[0+Math.floor(Math.random() * Config().proxy.length)]
-                    let proxyString = "http://" + proxy
-                    log.echo("Using proxy:", proxyString)
-                    return proxyString;
+                    let proxy = Config().proxy.at(0+Math.floor(Math.random() * Config().proxy.length) )
+                    if (!proxy) {
+                        return randomProxy()
+                    }
+                    return "http://" + proxy.user + ":" + proxy.password + "@" + proxy.host;
                 }
 
-                const proxyString = randomProxy()
-                page.on('request', async (request: any) => {
+                page.on('request', async (request) => {
                     await proxyRequest({
                         page: page,
-                        proxyUrl: proxyString,
+                        proxyUrl: randomProxy(),
                         request,
                     });
                 });

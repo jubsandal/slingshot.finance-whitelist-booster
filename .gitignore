@@ -1,5 +1,7 @@
 # Logs
 logs
+save*
+*.save
 import/
 *.txt
 *.log
